@@ -1,104 +1,104 @@
-import java.util.*;
+import java.sql.*;
+import java.util.Scanner;
 
-class Room {
-    int number;
-    boolean isBooked;
-    String guestName;
-
-    public Room(int number) {
-        this.number = number;
-        this.isBooked = false;
-        this.guestName = "";
-    }
-}
-
-public class HotelReservationSystem {
-    static Map<Integer, Room> rooms = new HashMap<>();
+public class HotelReservationJDBC {
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/HotelReservationSystem";
+    private static final String DB_USER = "root";
+    private static final String DB_PASS = ""; 
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        initializeRooms();
+        try (Scanner scanner = new Scanner(System.in);
+             Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASS)) {
 
-        boolean exit = false;
-        while (!exit) {
-            System.out.println("\n--- Hotel Reservation Menu ---");
-            System.out.println("1. Book a Room");
-            System.out.println("2. View Reservations");
-            System.out.println("3. Check Room Availability");
-            System.out.println("4. Exit");
-            System.out.print("Enter your choice: ");
-
-            if (scanner.hasNextInt()) {
+            while (true) {
+                System.out.println("\n--- Hotel Reservation Menu ---");
+                System.out.println("1. View Available Rooms");
+                System.out.println("2. Book a Room");
+                System.out.println("3. View Customers");
+                System.out.println("4. Exit");
+                System.out.print("Enter choice: ");
                 int choice = scanner.nextInt();
-                scanner.nextLine(); // Consume newline
+                scanner.nextLine();
 
                 switch (choice) {
-                    case 1 -> bookRoom(scanner);
-                    case 2 -> viewReservations();
-                    case 3 -> checkAvailability();
+                    case 1 -> viewAvailableRooms(conn);
+                    case 2 -> bookRoom(conn, scanner);
+                    case 3 -> viewCustomers(conn);
                     case 4 -> {
-                        System.out.println("Thank you for using the Hotel Reservation System!");
-                        exit = true;
+                        System.out.println("Goodbye!");
+                        return;
                     }
-                    default -> System.out.println("Invalid choice. Please try again.");
+                    default -> System.out.println("Invalid option.");
                 }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    static void viewAvailableRooms(Connection conn) throws SQLException {
+        String sql = "SELECT room_number FROM rooms WHERE is_booked = FALSE";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            System.out.println("Available Rooms:");
+            while (rs.next()) {
+                System.out.println("Room " + rs.getInt("room_number"));
+            }
+        }
+    }
+
+    static void bookRoom(Connection conn, Scanner scanner) throws SQLException {
+        System.out.print("Enter your name: ");
+        String name = scanner.nextLine();
+        System.out.print("Enter email: ");
+        String email = scanner.nextLine();
+        System.out.print("Enter phone: ");
+        String phone = scanner.nextLine();
+        System.out.print("Enter check-in date (YYYY-MM-DD): ");
+        String checkIn = scanner.nextLine();
+        System.out.print("Enter check-out date (YYYY-MM-DD): ");
+        String checkOut = scanner.nextLine();
+        System.out.print("Enter room number: ");
+        int roomNumber = scanner.nextInt();
+        scanner.nextLine();
+
+        String customerSQL = "INSERT INTO customers (name, email, phone, check_in, check_out) VALUES (?, ?, ?, ?, ?)";
+        PreparedStatement customerStmt = conn.prepareStatement(customerSQL, Statement.RETURN_GENERATED_KEYS);
+        customerStmt.setString(1, name);
+        customerStmt.setString(2, email);
+        customerStmt.setString(3, phone);
+        customerStmt.setDate(4, Date.valueOf(checkIn));
+        customerStmt.setDate(5, Date.valueOf(checkOut));
+        customerStmt.executeUpdate();
+
+        ResultSet keys = customerStmt.getGeneratedKeys();
+        if (keys.next()) {
+            int customerId = keys.getInt(1);
+
+            String roomSQL = "UPDATE rooms SET is_booked = TRUE, guest_id = ? WHERE room_number = ?";
+            PreparedStatement roomStmt = conn.prepareStatement(roomSQL);
+            roomStmt.setInt(1, customerId);
+            roomStmt.setInt(2, roomNumber);
+            int updated = roomStmt.executeUpdate();
+
+            if (updated > 0) {
+                System.out.println("Room " + roomNumber + " successfully booked for " + name + ".");
             } else {
-                System.out.println("Invalid input. Please enter a number.");
-                scanner.nextLine(); 
+                System.out.println("Room booking failed. Please check the room number.");
             }
         }
-        scanner.close();
     }
 
-    static void initializeRooms() {
-        for (int i = 101; i <= 110; i++) {
-            rooms.put(i, new Room(i));
-        }
-    }
-
-    static void bookRoom(Scanner scanner) {
-        System.out.print("Enter room number to book: ");
-        int number = scanner.nextInt();
-        scanner.nextLine(); // Consume newline
-
-        Room room = rooms.get(number);
-        if (room == null) {
-            System.out.println("Room number " + number + " does not exist.");
-        } else if (room.isBooked) {
-            System.out.println("Room " + number + " is already booked.");
-        } else {
-            System.out.print("Enter guest name: ");
-            room.guestName = scanner.nextLine();
-            room.isBooked = true;
-            System.out.println("Room " + number + " successfully booked for " + room.guestName + ".");
-        }
-    }
-
-    static void viewReservations() {
-        System.out.println("\n--- Current Reservations ---");
-        boolean hasReservations = false;
-        for (Room room : rooms.values()) {
-            if (room.isBooked) {
-                System.out.println("Room " + room.number + " - " + room.guestName);
-                hasReservations = true;
+    static void viewCustomers(Connection conn) throws SQLException {
+        String sql = "SELECT * FROM customers";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            System.out.println("--- Customer List ---");
+            while (rs.next()) {
+                System.out.printf("ID: %d | Name: %s | Check-in: %s | Check-out: %s%n",
+                        rs.getInt("customer_id"),
+                        rs.getString("name"),
+                        rs.getDate("check_in"),
+                        rs.getDate("check_out"));
             }
-        }
-        if (!hasReservations) {
-            System.out.println("No reservations found.");
-        }
-    }
-
-    static void checkAvailability() {
-        System.out.println("\n--- Available Rooms ---");
-        boolean hasAvailability = false;
-        for (Room room : rooms.values()) {
-            if (!room.isBooked) {
-                System.out.println("Room " + room.number);
-                hasAvailability = true;
-            }
-        }
-        if (!hasAvailability) {
-            System.out.println("No rooms available.");
         }
     }
 }
