@@ -1,0 +1,32 @@
+CREATE DATABASE HotelReservationSystem;
+
+USE HotelReservationSystem HotelReservationSystem ;
+
+CREATE TABLE rooms (
+    room_number INT PRIMARY KEY,
+    is_booked BOOLEAN DEFAULT FALSE,
+    guest_name VARCHAR(100)
+);
+
+CREATE TABLE rooms (
+    room_number INT PRIMARY KEY,
+    is_booked BOOLEAN DEFAULT FALSE,
+    guest_id INT,
+    FOREIGN KEY (guest_id) REFERENCES customers(customer_id)
+);
+
+INSERT INTO rooms (room_number, is_booked, guest_id) VALUES
+(101, FALSE, NULL),
+(102, FALSE, NULL),
+(103, FALSE, NULL),
+(104, FALSE, NULL),
+(105, FALSE, NULL),
+(106, FALSE, NULL),
+(107, FALSE, NULL),
+(108, FALSE, NULL),
+(109, FALSE, NULL),
+(110, FALSE, NULL);
+
+
+
+
