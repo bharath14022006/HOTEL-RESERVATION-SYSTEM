@@ -7,26 +7,7 @@ public class Hotel {
 		String username="root";
 		String password="";
 		
-		Connection con= DriverManager.getConnection(url, username , password);
-	
-		String sql = "SELECT * FROM ROOMS";
-		PreparedStatement st = con.prepareStatement(sql);
-		ResultSet rs=st.executeQuery(sql);
-		while (rs.next()) {
-	System.out.println(rs.getInt(1)+" "+rs.getInt(2)+" "+rs.getString(3));
-		
-		}
-
-	}
-
-}
-import java.sql.*;
-import java.util.Scanner;
-
-public class HotelReservationSystem {
-    private static final String URL = "jdbc:mysql://localhost:3306/hotel_db";
-    private static final String USER = "root";           // Change if needed
-    private static final String PASS = "yourpassword";   // Change your password
+		Connection con= DriverManager.getConnection(url, username , password)
     private static final Scanner sc = new Scanner(System.in);
 
     public static void main(String[] args) {
